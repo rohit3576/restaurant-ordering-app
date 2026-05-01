@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #fff7ed;
+  color: #0f172a;
+}
+
+.dark body {
+  background: #020617;
+  color: #f8fafc;
+}
+
+img {
+  display: block;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-4 py-2.5 font-semibold text-white shadow-soft transition hover:bg-ember-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-700 transition hover:border-ember-200 hover:text-ember-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100;
+  }
+
+  .panel {
+    @apply rounded-lg border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-900;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-ember-500 focus:ring-4 focus:ring-orange-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:ring-orange-950;
+  }
+}

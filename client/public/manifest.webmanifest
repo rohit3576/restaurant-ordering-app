@@ -1,0 +1,16 @@
+{
+  "name": "Qrave Restaurant Ordering",
+  "short_name": "Qrave",
+  "start_url": "/table/1",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
