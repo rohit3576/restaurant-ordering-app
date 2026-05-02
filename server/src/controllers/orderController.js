@@ -12,6 +12,8 @@ export const createOrder = async (req, res) => {
   if (demoStore) {
     const order = createDemoOrder(demoStore, { items, tableNo, customerName });
     if (!order) return res.status(400).json({ message: "One or more menu items are unavailable" });
+    const duplicate = findRecentDuplicate(demoStore.orders, order);
+    if (duplicate) return res.status(200).json(duplicate);
     demoStore.orders.unshift(order);
     req.app.get("io").to("admin").emit("order:new", order);
     return res.status(201).json(order);
@@ -35,11 +37,40 @@ export const createOrder = async (req, res) => {
   });
 
   const total = normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const recentOrders = await Order.find({
+    tableNo: String(tableNo).trim(),
+    customerName: String(customerName).trim(),
+    total,
+    createdAt: { $gte: new Date(Date.now() - 8000) }
+  }).sort({ createdAt: -1 });
+  const duplicate = recentOrders.find((recent) => sameItems(recent.items, normalizedItems));
+  if (duplicate) return res.status(200).json(duplicate);
+
   const order = await Order.create({ items: normalizedItems, total, tableNo, customerName });
 
   req.app.get("io").to("admin").emit("order:new", order);
   res.status(201).json(order);
 };
+
+const sameItems = (left = [], right = []) => {
+  if (left.length !== right.length) return false;
+  const serialize = (items) =>
+    items
+      .map((item) => `${item.menuItem}:${item.quantity}:${item.price}`)
+      .sort()
+      .join("|");
+  return serialize(left) === serialize(right);
+};
+
+const findRecentDuplicate = (orders, order) =>
+  orders.find(
+    (recent) =>
+      String(recent.tableNo) === String(order.tableNo) &&
+      recent.customerName === order.customerName &&
+      recent.total === order.total &&
+      Date.now() - new Date(recent.createdAt).getTime() < 8000 &&
+      sameItems(recent.items, order.items)
+  );
 
 export const getOrders = async (_req, res) => {
   const demoStore = _req.app.locals.demoStore;
@@ -66,7 +97,7 @@ export const getOrderById = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
   const { status } = req.body;
-  const allowedStatuses = ["Pending", "Preparing", "Ready"];
+  const allowedStatuses = ["pending", "preparing", "served"];
   if (!allowedStatuses.includes(status)) {
     return res.status(400).json({ message: "Invalid order status" });
   }
@@ -108,7 +139,7 @@ export const getAnalytics = async (_req, res) => {
         result[order.status.toLowerCase()] += 1;
         return result;
       },
-      { totalOrders: 0, revenue: 0, pending: 0, preparing: 0, ready: 0 }
+      { totalOrders: 0, revenue: 0, pending: 0, preparing: 0, served: 0 }
     );
     return res.json(summary);
   }
@@ -119,14 +150,14 @@ export const getAnalytics = async (_req, res) => {
         _id: null,
         totalOrders: { $sum: 1 },
         revenue: { $sum: "$total" },
-        pending: { $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] } },
-        preparing: { $sum: { $cond: [{ $eq: ["$status", "Preparing"] }, 1, 0] } },
-        ready: { $sum: { $cond: [{ $eq: ["$status", "Ready"] }, 1, 0] } }
+        pending: { $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] } },
+        preparing: { $sum: { $cond: [{ $eq: ["$status", "preparing"] }, 1, 0] } },
+        served: { $sum: { $cond: [{ $eq: ["$status", "served"] }, 1, 0] } }
       }
     }
   ]);
 
-  res.json(summary || { totalOrders: 0, revenue: 0, pending: 0, preparing: 0, ready: 0 });
+  res.json(summary || { totalOrders: 0, revenue: 0, pending: 0, preparing: 0, served: 0 });
 };
 
 const createDemoOrder = (demoStore, { items, tableNo, customerName }) => {
@@ -150,7 +181,7 @@ const createDemoOrder = (demoStore, { items, tableNo, customerName }) => {
     _id: `order_${Date.now()}`,
     customerName: String(customerName).trim(),
     tableNo: String(tableNo).trim(),
-    status: "Pending",
+    status: "pending",
     items: normalizedItems,
     total: normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     createdAt: new Date().toISOString()

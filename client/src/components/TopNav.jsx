@@ -5,7 +5,7 @@ import { ChefHat, Menu, Moon, Sun, X } from "lucide-react";
 export default function TopNav({ dark, onToggleTheme, tableNo, rightSlot }) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const customerPath = tableNo ? `/table/${tableNo}` : "/table/1";
+  const customerPath = tableNo ? `/menu?table=${tableNo}` : "/menu?table=1";
   const links = [
     { label: "Menu", to: customerPath },
     { label: "Admin", to: "/admin" }
@@ -30,7 +30,7 @@ export default function TopNav({ dark, onToggleTheme, tableNo, rightSlot }) {
               key={link.to}
               to={link.to}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                location.pathname === link.to
+                `${location.pathname}${location.search}` === link.to || (link.label === "Menu" && location.pathname === "/menu")
                   ? "bg-orange-100 text-ember-700 dark:bg-orange-950 dark:text-orange-200"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
               }`}

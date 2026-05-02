@@ -1,6 +1,8 @@
 import { Plus, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 
+const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='240' viewBox='0 0 320 240'%3E%3Crect width='320' height='240' fill='%23fff7ed'/%3E%3Ccircle cx='160' cy='108' r='54' fill='%23fb923c' opacity='.35'/%3E%3Cpath d='M92 164h136v18H92z' fill='%239a3412' opacity='.7'/%3E%3Ctext x='160' y='206' text-anchor='middle' font-family='Arial' font-size='18' font-weight='700' fill='%239a3412'%3EQrave%3C/text%3E%3C/svg%3E";
+
 export default function MenuCard({ item, quantity, onAdd, onRemove }) {
   return (
     <motion.article
@@ -13,6 +15,9 @@ export default function MenuCard({ item, quantity, onAdd, onRemove }) {
         <img
           src={item.image}
           alt={item.name}
+          onError={(event) => {
+            event.currentTarget.src = fallbackImage;
+          }}
           loading="lazy"
           className="h-28 w-28 shrink-0 rounded-lg object-cover sm:h-36 sm:w-40"
         />

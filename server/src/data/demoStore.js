@@ -70,7 +70,7 @@ export function createDemoStore() {
       _id: "order_demo_1",
       customerName: "Aarav",
       tableNo: "4",
-      status: "Preparing",
+      status: "preparing",
       items: [
         { menuItem: menu[0]._id, name: menu[0].name, price: menu[0].price, quantity: 1, image: menu[0].image },
         { menuItem: menu[4]._id, name: menu[4].name, price: menu[4].price, quantity: 2, image: menu[4].image }
@@ -82,7 +82,7 @@ export function createDemoStore() {
       _id: "order_demo_2",
       customerName: "Maya",
       tableNo: "8",
-      status: "Pending",
+      status: "pending",
       items: [{ menuItem: menu[2]._id, name: menu[2].name, price: menu[2].price, quantity: 2, image: menu[2].image }],
       total: menu[2].price * 2,
       createdAt: new Date(Date.now() - 1000 * 60 * 6).toISOString()

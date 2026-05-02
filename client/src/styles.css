@@ -26,6 +26,36 @@ img {
   display: block;
 }
 
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  header,
+  form,
+  table,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  #qr-generator {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .qr-print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .qr-ticket {
+    break-inside: avoid;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-4 py-2.5 font-semibold text-white shadow-soft transition hover:bg-ember-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;

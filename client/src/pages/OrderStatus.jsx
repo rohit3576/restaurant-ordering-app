@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { socket } from "../services/socket";
 import { useSocket } from "../hooks/useSocket";
+import { getLocalOrderById, subscribeToLocalOrders } from "../services/localStore";
 import StatusStepper from "../components/StatusStepper";
 import TopNav from "../components/TopNav";
 
@@ -16,7 +17,11 @@ export default function OrderStatus({ dark, onToggleTheme }) {
     api
       .get(`/orders/${orderId}`)
       .then(({ data }) => setOrder(data))
-      .catch(() => toast.error("Order not found"))
+      .catch(() => {
+        const localOrder = getLocalOrderById(orderId);
+        if (localOrder) setOrder(localOrder);
+        else toast.error("Order not found");
+      })
       .finally(() => setLoading(false));
   }, [orderId]);
 
@@ -38,6 +43,15 @@ export default function OrderStatus({ dark, onToggleTheme }) {
     }, [orderId])
   );
 
+  useEffect(
+    () =>
+      subscribeToLocalOrders(() => {
+        const localOrder = getLocalOrderById(orderId);
+        if (localOrder) setOrder(localOrder);
+      }),
+    [orderId]
+  );
+
   if (loading) return <main className="grid min-h-screen place-items-center bg-ember-50 dark:bg-slate-950">Loading order...</main>;
   if (!order) return <main className="grid min-h-screen place-items-center bg-ember-50 dark:bg-slate-950">Order not found</main>;
 
@@ -46,7 +60,7 @@ export default function OrderStatus({ dark, onToggleTheme }) {
       <TopNav dark={dark} onToggleTheme={onToggleTheme} tableNo={order.tableNo} />
       <section className="mx-auto max-w-2xl px-4 py-8">
         <div className="panel p-5 sm:p-8">
-          <p className="text-sm font-bold uppercase tracking-wide text-ember-700 dark:text-orange-300">Table {order.tableNo}</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-ember-700 dark:text-orange-300">Table {order.tableNo || order.table}</p>
           <h1 className="mt-2 text-3xl font-black">Thanks, {order.customerName}</h1>
           <p className="mt-2 text-slate-600 dark:text-slate-300">Your order is live. Keep this page open for kitchen updates.</p>
 
@@ -67,7 +81,7 @@ export default function OrderStatus({ dark, onToggleTheme }) {
             </div>
           </div>
 
-          <Link to={`/table/${order.tableNo}`} className="btn-secondary mt-6 w-full">Back to menu</Link>
+          <Link to={`/menu?table=${order.tableNo || order.table}`} className="btn-secondary mt-6 w-full">Back to menu</Link>
         </div>
       </section>
     </main>

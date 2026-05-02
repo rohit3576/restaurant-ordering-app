@@ -14,7 +14,7 @@ npm run dev
 Frontend: `http://localhost:5173`
 Backend: `http://localhost:5000`
 
-Demo customer URL: `http://localhost:5173/table/5`
+Demo customer URL: `http://localhost:5173/menu?table=5`
 Admin URL: `http://localhost:5173/admin`
 
 Default admin:
@@ -26,7 +26,7 @@ password: admin123
 
 ## Deployment
 
-Deploy `client` to Vercel and set `VITE_API_URL` to your Render backend URL.
+Deploy `client` to Vercel or Netlify and set `VITE_API_URL` to your backend `/api` URL and `VITE_SOCKET_URL` to the backend origin when using the API server. SPA rewrites are included in `client/vercel.json` and `client/public/_redirects`.
 Deploy `server` to Render and set `MONGO_URI`, `JWT_SECRET`, and `CLIENT_URL`.
 
 Razorpay is optional. Add test keys in `server/.env` to enable order creation.

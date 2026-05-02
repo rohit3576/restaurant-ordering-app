@@ -25,7 +25,8 @@ function App() {
     <Router>
       <Suspense fallback={<div className="grid min-h-screen place-items-center bg-ember-50 text-slate-700 dark:bg-slate-950 dark:text-white">Loading...</div>}>
         <Routes>
-          <Route path="/" element={<Navigate to="/table/1" replace />} />
+          <Route path="/" element={<Navigate to="/menu?table=1" replace />} />
+          <Route path="/menu" element={<CustomerMenu dark={dark} onToggleTheme={() => setDark((value) => !value)} />} />
           <Route path="/table/:tableNo" element={<CustomerMenu dark={dark} onToggleTheme={() => setDark((value) => !value)} />} />
           <Route path="/order/:orderId" element={<OrderStatus dark={dark} onToggleTheme={() => setDark((value) => !value)} />} />
           <Route path="/admin" element={<AdminLogin dark={dark} onToggleTheme={() => setDark((value) => !value)} />} />

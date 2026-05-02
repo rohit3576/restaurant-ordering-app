@@ -1,6 +1,7 @@
 import { CheckCircle2 } from "lucide-react";
 
-const steps = ["Pending", "Preparing", "Ready"];
+const steps = ["pending", "preparing", "served"];
+const labels = { pending: "Pending", preparing: "Preparing", served: "Served" };
 
 export default function StatusStepper({ status }) {
   const activeIndex = steps.indexOf(status);
@@ -8,7 +9,7 @@ export default function StatusStepper({ status }) {
   return (
     <div className="grid gap-4">
       <div className="rounded-lg bg-orange-50 px-4 py-3 text-sm font-bold text-ember-700 dark:bg-orange-950 dark:text-orange-200">
-        Current status: {status}
+        Current status: {labels[status] || status}
       </div>
       {steps.map((step, index) => {
         const done = index <= activeIndex;
@@ -18,11 +19,11 @@ export default function StatusStepper({ status }) {
               <CheckCircle2 size={20} />
             </span>
             <div>
-              <p className="font-bold">{step}</p>
+              <p className="font-bold">{labels[step]}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {step === "Pending" && "Order received by the kitchen"}
-                {step === "Preparing" && "Your meal is being prepared"}
-                {step === "Ready" && "Please collect or wait for service"}
+                {step === "pending" && "Order received by the kitchen"}
+                {step === "preparing" && "Your meal is being prepared"}
+                {step === "served" && "Your order has been served"}
               </p>
             </div>
           </div>

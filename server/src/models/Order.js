@@ -17,8 +17,8 @@ const orderSchema = new mongoose.Schema(
     total: { type: Number, required: true, min: 0 },
     status: {
       type: String,
-      enum: ["Pending", "Preparing", "Ready"],
-      default: "Pending"
+      enum: ["pending", "preparing", "served"],
+      default: "pending"
     },
     tableNo: { type: String, required: true, trim: true },
     customerName: { type: String, required: true, trim: true }

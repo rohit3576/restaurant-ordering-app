@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, ChefHat, IndianRupee, LogOut, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { BarChart3, Bell, ChefHat, IndianRupee, LogOut, Plus, ReceiptText, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { socket } from "../services/socket";
 import { useSocket } from "../hooks/useSocket";
+import {
+  deleteLocalMenuItem,
+  getLocalAnalytics,
+  getLocalMenu,
+  getLocalOrders,
+  saveLocalMenuItem,
+  subscribeToLocalOrders,
+  updateLocalOrderStatus
+} from "../services/localStore";
 import TopNav from "../components/TopNav";
 import EmptyState from "../components/EmptyState";
+import QrCodeGenerator from "../components/QrCodeGenerator";
 
 const emptyForm = { name: "", price: "", category: "", image: "", description: "", isAvailable: true };
 
@@ -18,6 +28,14 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [offlineMode, setOfflineMode] = useState(false);
+
+  const loadLocalAdminData = useCallback(() => {
+    setOrders(getLocalOrders());
+    setAnalytics(getLocalAnalytics());
+    setMenu(getLocalMenu(true));
+    setOfflineMode(true);
+  }, []);
 
   const loadAdminData = useCallback(async () => {
     try {
@@ -29,13 +47,14 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
       setOrders(ordersRes.data);
       setAnalytics(analyticsRes.data);
       setMenu(menuRes.data);
+      setOfflineMode(false);
     } catch {
-      localStorage.removeItem("adminToken");
-      navigate("/admin");
+      loadLocalAdminData();
+      toast("Using local demo admin data");
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [loadLocalAdminData]);
 
   useEffect(() => {
     loadAdminData();
@@ -45,6 +64,8 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
     socket.on("connect", rejoin);
     return () => socket.off("connect", rejoin);
   }, [loadAdminData]);
+
+  useEffect(() => subscribeToLocalOrders(() => loadLocalAdminData()), [loadLocalAdminData]);
 
   useSocket(
     "order:new",
@@ -56,6 +77,7 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
         revenue: (current?.revenue || 0) + order.total,
         pending: (current?.pending || 0) + 1
       }));
+      playNotification();
       toast.success(`New order from table ${order.tableNo}`);
     }, [])
   );
@@ -72,13 +94,20 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
     () => [
       { name: "Pending", value: analytics?.pending || 0 },
       { name: "Preparing", value: analytics?.preparing || 0 },
-      { name: "Ready", value: analytics?.ready || 0 }
+      { name: "Served", value: analytics?.served || 0 }
     ],
     [analytics]
   );
 
   const updateStatus = async (orderId, status) => {
     try {
+      if (offlineMode) {
+        const data = updateLocalOrderStatus(orderId, status);
+        setOrders((current) => current.map((order) => (order._id === orderId || order.id === orderId ? data : order)));
+        setAnalytics(getLocalAnalytics());
+        toast.success("Status updated");
+        return;
+      }
       const { data } = await api.patch(`/orders/${orderId}/status`, { status });
       setOrders((current) => current.map((order) => (order._id === orderId ? data : order)));
       toast.success("Status updated");
@@ -94,6 +123,14 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
     }
     const payload = { ...form, price: Number(form.price) };
     try {
+      if (offlineMode) {
+        const data = saveLocalMenuItem(payload, editingId);
+        setMenu(getLocalMenu(true));
+        setForm(emptyForm);
+        setEditingId(null);
+        toast.success("Menu saved");
+        return;
+      }
       if (editingId) {
         const { data } = await api.patch(`/menu/${editingId}`, payload);
         setMenu((current) => current.map((item) => (item._id === editingId ? data : item)));
@@ -116,6 +153,12 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
 
   const deleteItem = async (id) => {
     try {
+      if (offlineMode) {
+        deleteLocalMenuItem(id);
+        setMenu(getLocalMenu(true));
+        toast.success("Item deleted");
+        return;
+      }
       await api.delete(`/menu/${id}`);
       setMenu((current) => current.filter((item) => item._id !== id));
       toast.success("Item deleted");
@@ -137,14 +180,20 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
           <div>
             <p className="text-sm font-bold uppercase tracking-wide text-ember-700 dark:text-orange-300">Kitchen command</p>
             <h1 className="text-3xl font-black">Admin dashboard</h1>
+            {offlineMode && <p className="mt-2 text-sm font-semibold text-ember-700 dark:text-orange-300">LocalStorage demo mode is active.</p>}
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-4">
           <Stat icon={<ReceiptText />} label="Orders" value={analytics?.totalOrders || 0} />
           <Stat icon={<IndianRupee />} label="Revenue" value={`Rs.${analytics?.revenue || 0}`} />
           <Stat icon={<ChefHat />} label="In kitchen" value={(analytics?.pending || 0) + (analytics?.preparing || 0)} />
+          <Stat icon={<Bell />} label="Served" value={analytics?.served || 0} />
         </section>
+
+        <div className="mt-6">
+          <QrCodeGenerator />
+        </div>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div className="panel p-4">
@@ -208,28 +257,40 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
                     <th className="p-4">Table</th>
                     <th className="p-4">Items</th>
                     <th className="p-4">Total</th>
+                    <th className="p-4">Time</th>
                     <th className="p-4">Status</th>
                   </tr>
                 </thead>
                 <tbody>
               {loading ? (
-                <tr><td className="p-4 text-slate-500" colSpan="5">Loading orders...</td></tr>
+                <tr><td className="p-4 text-slate-500" colSpan="6">Loading orders...</td></tr>
               ) : orders.length ? orders.map((order) => (
                     <tr key={order._id} className="border-t border-slate-100 dark:border-slate-800">
                       <td className="p-4 font-semibold">{order.customerName}</td>
-                      <td className="p-4">{order.tableNo}</td>
+                      <td className="p-4">{order.tableNo || order.table}</td>
                       <td className="p-4">{order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}</td>
                       <td className="p-4 font-bold">Rs.{order.total}</td>
+                      <td className="p-4">{formatTime(order.createdAt || order.timestamp)}</td>
                       <td className="p-4">
-                        <select className="input py-2" value={order.status} onChange={(e) => updateStatus(order._id, e.target.value)}>
-                          <option>Pending</option>
-                          <option>Preparing</option>
-                          <option>Ready</option>
-                        </select>
+                        <div className="flex flex-wrap gap-2">
+                          {["pending", "preparing", "served"].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => updateStatus(order._id || order.id, status)}
+                              className={`rounded-lg px-3 py-2 text-xs font-bold capitalize transition ${
+                                order.status === status
+                                  ? "bg-ember-500 text-white"
+                                  : "bg-slate-100 text-slate-600 hover:bg-orange-100 dark:bg-slate-800 dark:text-slate-200"
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          ))}
+                        </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td className="p-4" colSpan="5"><EmptyState title="No live orders" message="New customer orders will appear here instantly." /></td></tr>
+                    <tr><td className="p-4" colSpan="6"><EmptyState title="No live orders" message="New customer orders will appear here instantly." /></td></tr>
                   )}
                 </tbody>
               </table>
@@ -264,6 +325,32 @@ export default function AdminDashboard({ dark, onToggleTheme }) {
       </div>
     </main>
   );
+}
+
+function formatTime(value) {
+  const date = typeof value === "number" ? new Date(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function playNotification() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.25);
+  } catch {
+    // Browsers may block audio until the page has received user interaction.
+  }
 }
 
 function Stat({ icon, label, value }) {
