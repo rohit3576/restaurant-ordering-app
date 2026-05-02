@@ -74,7 +74,7 @@ export const seedDemoData = async () => {
         {
           customerName: "Aarav",
           tableNo: "4",
-          status: "Preparing",
+          status: "preparing",
           items: seededMenu.slice(0, 2).map((item) => ({
             menuItem: item._id,
             name: item.name,
